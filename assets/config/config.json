@@ -1,0 +1,11 @@
+{
+    "server_dir": "",
+    "log_output_dir": "",
+    "sql_host": "127.0.0.1",
+    "sql_user": "root",
+    "sql_database": "xidb",
+    "sql_port": 3306,
+    "auto_start_servers": false,
+    "text_color": "#00ff00",
+    "bg_color": "#000000"
+}

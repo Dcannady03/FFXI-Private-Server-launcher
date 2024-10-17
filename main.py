@@ -1,30 +1,13 @@
 import os
 import sys
-import ctypes
 import tkinter as tk
 import logging
 from config_handler import ConfigHandler
 from server_manager import ServerManager
 from resource_monitor import ResourceMonitor
-from sql_manager import SQLManager  # Assuming this is your SQL manager
+from sql_manager import SQLManager
 from gui import GUI
-
-#def is_admin():
- #   """Check if the script is running with admin rights."""
-  #  try:
-   #     return ctypes.windll.shell32.IsUserAnAdmin()
-    #except:
-    # 3   return False
-
-#def run_as_admin():
- #   """Re-launch the script with admin privileges."""
-  #  try:
-   #     # Re-launch the script with admin rights
-   #   ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
-    #    sys.exit(0)  # Exit the current instance, so the elevated one runs
-    #except Exception as e:
-     #   print(f"Failed to re-launch as admin: {e}")
-      #  sys.exit(1)
+import json
 
 def setup_logging():
     logging.basicConfig(
@@ -39,29 +22,53 @@ def setup_logging():
     console.setFormatter(formatter)
     logging.getLogger('').addHandler(console)
 
-def main():
-    # Check for admin rights and relaunch as admin if not running with elevated privileges
-    #if not is_admin():
-     #   print("Re-launching with admin privileges")
-      #  run_as_admin()
+def resource_path(relative_path):
+    """ Get the absolute path to the resource, works for dev and for PyInstaller bundle """
+    if hasattr(sys, '_MEIPASS'):
+        base_path = sys._MEIPASS  # PyInstaller stores path in _MEIPASS
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
 
+def load_version():
+    """Load the version from assets/config/version.json, or create it if it doesn't exist."""
+    version_file = resource_path("assets/config/version.json")
+    default_version = "1.0.5"  # Set your default version here
+
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(version_file), exist_ok=True)
+
+    try:
+        # Try opening the version.json file
+        with open(version_file, "r") as file:
+            data = json.load(file)
+            return data.get("version", default_version)
+    except FileNotFoundError:
+        # If the file does not exist, create it with the default version
+        version_data = {"version": default_version}
+        with open(version_file, "w") as file:
+            json.dump(version_data, file, indent=4)
+        return default_version
+
+def main():
     setup_logging()
     logger = logging.getLogger(__name__)
     logger.info("Starting FFXI Server Manager")
 
-    root = tk.Tk()
+    # Load version info
+    version = load_version()
 
-    # Initialize managers
+    root = tk.Tk()
     config_handler = ConfigHandler()
     config_handler.load_config()
-
+    
+    # Initialize managers
     server_manager = ServerManager(config_handler.server_dir)
     resource_monitor = ResourceMonitor()
-    sql_manager = SQLManager()  # Initialize SQLManager or similar
+    sql_manager = SQLManager()
 
-    # Create the GUI, passing in all required managers
-    gui = GUI(root, config_handler, server_manager, resource_monitor, sql_manager)
-
+    # Create the GUI, passing in all required managers and version info
+    gui = GUI(root, config_handler, server_manager, resource_monitor, sql_manager, version)
     logger.info("GUI initialized, starting main loop")
     root.mainloop()
 
